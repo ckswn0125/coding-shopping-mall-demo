@@ -1,0 +1,12 @@
+{
+  "name": "coding-shopping-mall-demo",
+  "private": true,
+  "description": "Shopping mall monorepo — Heroku runs the Express server",
+  "scripts": {
+    "start": "npm start --prefix server",
+    "heroku-postbuild": "npm install --prefix server --omit=dev"
+  },
+  "engines": {
+    "node": "20.x"
+  }
+}
