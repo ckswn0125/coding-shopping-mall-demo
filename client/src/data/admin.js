@@ -1,0 +1,83 @@
+// 관리자 페이지용 초기 상품/주문 샘플 데이터
+export const INITIAL_ADMIN_PRODUCTS = [
+  {
+    id: "p1",
+    brand: "VIBE BASIC",
+    name: "오버핏 코튼 셔츠",
+    price: 39000,
+    stock: 42,
+    status: "판매중",
+    category: "상의",
+  },
+  {
+    id: "p2",
+    brand: "NORTH LINE",
+    name: "라이트 윈드브레이커",
+    price: 79000,
+    stock: 18,
+    status: "판매중",
+    category: "아우터",
+  },
+  {
+    id: "p3",
+    brand: "CITY DENIM",
+    name: "와이드 데님 팬츠",
+    price: 59000,
+    stock: 0,
+    status: "품절",
+    category: "바지",
+  },
+  {
+    id: "p4",
+    brand: "SOFT LAB",
+    name: "니트 크루넥",
+    price: 49000,
+    stock: 27,
+    status: "판매중",
+    category: "상의",
+  },
+  {
+    id: "p5",
+    brand: "WALK ON",
+    name: "데일리 스니커즈",
+    price: 89000,
+    stock: 11,
+    status: "판매중",
+    category: "신발",
+  },
+];
+
+export const INITIAL_ORDERS = [
+  {
+    id: "ORD-10021",
+    customer: "김민수",
+    product: "오버핏 코튼 셔츠",
+    amount: 31200,
+    status: "배송중",
+    date: "2026-11-18",
+  },
+  {
+    id: "ORD-10020",
+    customer: "이서연",
+    product: "데일리 스니커즈",
+    amount: 72980,
+    status: "결제완료",
+    date: "2026-11-18",
+  },
+  {
+    id: "ORD-10019",
+    customer: "박지훈",
+    product: "와이드 데님 팬츠",
+    amount: 44250,
+    status: "배송완료",
+    date: "2026-11-17",
+  },
+  {
+    id: "ORD-10018",
+    customer: "최유진",
+    product: "니트 크루넥",
+    amount: 44100,
+    status: "취소",
+    date: "2026-11-16",
+  },
+];
