@@ -1,8 +1,8 @@
 // 포트원(아임포트) 결제 검증 유틸
 
 async function getAccessToken() {
-  const impKey = process.env.PORTONE_API_KEY;
-  const impSecret = process.env.PORTONE_API_SECRET;
+  const impKey = (process.env.PORTONE_API_KEY || "").trim();
+  const impSecret = (process.env.PORTONE_API_SECRET || "").trim();
 
   if (!impKey || !impSecret) {
     return null;
@@ -17,10 +17,13 @@ async function getAccessToken() {
     }),
   });
 
-  const data = await response.json();
+  const data = await response.json().catch(() => ({}));
 
   if (data.code !== 0 || !data.response?.access_token) {
-    throw new Error(data.message || "포트원 토큰 발급에 실패했습니다.");
+    throw new Error(
+      data.message ||
+        "포트원 토큰 발급에 실패했습니다. Heroku의 PORTONE_API_KEY / PORTONE_API_SECRET 을 확인해 주세요."
+    );
   }
 
   return data.response.access_token;

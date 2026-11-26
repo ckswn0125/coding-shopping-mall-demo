@@ -28,7 +28,12 @@ export async function apiFetch(path, options = {}) {
 
   // 4xx/5xx 이면 Error 로 던져서 화면에서 catch 할 수 있게 함
   if (!response.ok) {
-    throw new Error(data.message || `Request failed: ${response.status}`);
+    const error = new Error(
+      data.message || `Request failed: ${response.status}`
+    );
+    error.status = response.status;
+    error.data = data;
+    throw error;
   }
 
   return data;

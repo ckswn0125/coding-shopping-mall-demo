@@ -17,24 +17,35 @@ export function getOrderById(id) {
 }
 
 // 주문 생성 (포트원 결제 성공 후)
-export function createOrder({
+// 이미 생성된 결제(409)여도 order 가 있으면 성공으로 처리
+export async function createOrder({
   cartItemIds,
   shippingAddress,
   paymentMethod,
   impUid,
   merchantUid,
 }) {
-  return apiFetch("/api/orders", {
-    method: "POST",
-    auth: true,
-    body: JSON.stringify({
-      cartItemIds,
-      shippingAddress,
-      paymentMethod,
-      impUid,
-      merchantUid,
-    }),
-  });
+  try {
+    return await apiFetch("/api/orders", {
+      method: "POST",
+      auth: true,
+      body: JSON.stringify({
+        cartItemIds,
+        shippingAddress,
+        paymentMethod,
+        impUid,
+        merchantUid,
+      }),
+    });
+  } catch (error) {
+    if (error.status === 409 && error.data?.order) {
+      return {
+        message: error.message,
+        order: error.data.order,
+      };
+    }
+    throw error;
+  }
 }
 
 // 주문 수정 (배송지 / 상태 / 결제수단)

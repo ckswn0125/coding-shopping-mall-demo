@@ -29,7 +29,11 @@ function CheckoutComplete() {
 
     let pending;
     try {
-      pending = JSON.parse(sessionStorage.getItem("pendingOrder") || "null");
+      pending = JSON.parse(
+        localStorage.getItem("pendingOrder") ||
+          sessionStorage.getItem("pendingOrder") ||
+          "null"
+      );
     } catch {
       pending = null;
     }
@@ -49,6 +53,7 @@ function CheckoutComplete() {
       .then((result) => {
         sessionStorage.removeItem("checkoutItemIds");
         sessionStorage.removeItem("pendingOrder");
+        localStorage.removeItem("pendingOrder");
         notifyCartUpdated();
         navigate(`/orders/${result.order._id}/success`, { replace: true });
       })

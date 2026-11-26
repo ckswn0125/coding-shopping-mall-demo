@@ -219,22 +219,22 @@ function Checkout() {
       `${form.address1.trim()} ${form.address2.trim()}`.trim() ||
       "주소 미입력";
 
-    // 결제 성공 후 주문 생성에 쓸 배송 정보 (모바일 리다이렉트 대비 임시 저장)
-    sessionStorage.setItem(
-      "pendingOrder",
-      JSON.stringify({
-        cartItemIds,
-        paymentMethod,
-        shippingAddress: {
-          recipient: form.recipient.trim(),
-          phone: form.phone.trim(),
-          zipCode: form.zipCode.trim(),
-          address1: form.address1.trim(),
-          address2: form.address2.trim(),
-          memo: form.memo.trim(),
-        },
-      })
-    );
+    // 결제 성공 후 주문 생성에 쓸 배송 정보
+    // 모바일 PG 이동 시 sessionStorage 가 비는 경우가 있어 localStorage 사용
+    const pendingOrder = {
+      cartItemIds,
+      paymentMethod,
+      shippingAddress: {
+        recipient: form.recipient.trim(),
+        phone: form.phone.trim(),
+        zipCode: form.zipCode.trim(),
+        address1: form.address1.trim(),
+        address2: form.address2.trim(),
+        memo: form.memo.trim(),
+      },
+    };
+    localStorage.setItem("pendingOrder", JSON.stringify(pendingOrder));
+    sessionStorage.setItem("pendingOrder", JSON.stringify(pendingOrder));
 
     setSubmitting(true);
 
@@ -281,6 +281,7 @@ function Checkout() {
           });
           sessionStorage.removeItem("checkoutItemIds");
           sessionStorage.removeItem("pendingOrder");
+          localStorage.removeItem("pendingOrder");
           notifyCartUpdated();
           navigate(`/orders/${result.order._id}/success`, { replace: true });
         } catch (err) {

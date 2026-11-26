@@ -1,6 +1,7 @@
 const Cart = require("../models/Cart");
 const Order = require("../models/Order");
 const Product = require("../models/Product");
+const User = require("../models/User");
 const {
   ORDER_STATUSES,
   PAYMENT_METHODS,
@@ -178,6 +179,7 @@ const createOrder = async (req, res, next) => {
         allowReady: paymentMethod === "무통장",
       });
     } catch (verifyError) {
+      console.error("[orders] payment verify failed:", verifyError.message);
       return res.status(400).json({
         message: verifyError.message || "결제 검증에 실패했습니다.",
       });
@@ -265,10 +267,14 @@ const createOrder = async (req, res, next) => {
 // 일반 유저: 내 주문 / 관리자: 전체 주문 (?mine=true 면 내 주문만)
 const getOrders = async (req, res, next) => {
   try {
+    const userId = req.user.id || req.user._id;
+    // JWT 값이 오래됐을 수 있어 DB 기준으로 관리자 여부 확인
+    const dbUser = await User.findById(userId).select("user_type");
+    const isAdmin =
+      dbUser?.user_type === "admin" || req.user.user_type === "admin";
+
     const filter =
-      req.user.user_type === "admin" && req.query.mine !== "true"
-        ? {}
-        : { user: req.user.id };
+      isAdmin && req.query.mine !== "true" ? {} : { user: userId };
 
     const orders = await Order.find(filter)
       .populate("user", "name email phone")
