@@ -159,9 +159,10 @@ function Admin() {
       .finally(() => setProductsLoading(false));
   }, [checking, productPage]);
 
-  // 전체 주문 목록 조회 (관리자)
+  // 전체 주문 목록 조회 (관리자) — 주문 관리 메뉴 진입 시에도 다시 조회
   useEffect(() => {
     if (checking) return;
+    if (activeMenu !== "dashboard" && activeMenu !== "orders") return;
 
     setOrdersLoading(true);
     setOrdersError("");
@@ -170,7 +171,7 @@ function Admin() {
       .then((data) => setOrders(Array.isArray(data) ? data : []))
       .catch((err) => setOrdersError(err.message || "주문 조회 실패"))
       .finally(() => setOrdersLoading(false));
-  }, [checking]);
+  }, [checking, activeMenu]);
 
   const activeOrderTab =
     ORDER_STATUS_TABS.find((tab) => tab.id === orderTabId) ||
