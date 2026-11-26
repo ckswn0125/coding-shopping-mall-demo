@@ -1,5 +1,9 @@
 // 포트원(아임포트) 결제 검증 유틸
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function getAccessToken() {
   const impKey = (process.env.PORTONE_API_KEY || "").trim();
   const impSecret = (process.env.PORTONE_API_SECRET || "").trim();
@@ -29,6 +33,20 @@ async function getAccessToken() {
   return data.response.access_token;
 }
 
+async function fetchPaymentOnce(impUid, accessToken) {
+  const response = await fetch(
+    `https://api.iamport.kr/payments/${encodeURIComponent(impUid)}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: accessToken,
+      },
+    }
+  );
+
+  return response.json().catch(() => ({}));
+}
+
 async function fetchPayment(impUid) {
   const accessToken = await getAccessToken();
 
@@ -45,23 +63,35 @@ async function fetchPayment(impUid) {
     return null;
   }
 
-  const response = await fetch(
-    `https://api.iamport.kr/payments/${encodeURIComponent(impUid)}`,
-    {
-      method: "GET",
-      headers: {
-        Authorization: accessToken,
-      },
+  // 결제 직후 조회 시 간헐적으로 아직 반영 안 된 경우 대비 재시도
+  let lastMessage = "결제 정보 조회에 실패했습니다.";
+  for (let attempt = 1; attempt <= 4; attempt += 1) {
+    const data = await fetchPaymentOnce(impUid, accessToken);
+
+    if (data.code === 0 && data.response) {
+      return data.response;
     }
-  );
 
-  const data = await response.json();
+    lastMessage = data.message || lastMessage;
+    console.error(
+      `[portone] payment lookup failed (try ${attempt}/4):`,
+      lastMessage,
+      "impUid=",
+      impUid
+    );
 
-  if (data.code !== 0 || !data.response) {
-    throw new Error(data.message || "결제 정보 조회에 실패했습니다.");
+    if (attempt < 4) {
+      await sleep(800 * attempt);
+    }
   }
 
-  return data.response;
+  if (String(lastMessage).includes("존재하지 않는 결제정보")) {
+    throw new Error(
+      "존재하지 않는 결제정보입니다. 카드 결제는 됐을 수 있지만, Heroku의 PORTONE_API_KEY/SECRET 이 결제에 쓴 상점 식별코드(imp...)와 같은 포트원 계정인지 확인해 주세요."
+    );
+  }
+
+  throw new Error(lastMessage);
 }
 
 /**
