@@ -33,21 +33,22 @@ async function getAccessToken() {
   return data.response.access_token;
 }
 
-async function fetchPaymentOnce(impUid, accessToken) {
-  const response = await fetch(
-    `https://api.iamport.kr/payments/${encodeURIComponent(impUid)}`,
-    {
-      method: "GET",
-      headers: {
-        Authorization: accessToken,
-      },
-    }
-  );
-
+async function fetchJson(url, accessToken) {
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: accessToken,
+    },
+  });
   return response.json().catch(() => ({}));
 }
 
-async function fetchPayment(impUid) {
+/**
+ * 결제 단건 조회
+ * - 일부 환경에서 GET /payments/{imp_uid} 가 "존재하지 않는 결제정보"를 반환함
+ * - 그래서 merchant_uid 조회(GET /payments/find/{merchant_uid})를 우선 사용
+ */
+async function fetchPayment({ impUid, merchantUid }) {
   const accessToken = await getAccessToken();
 
   // API 키가 없으면 개발용: 클라이언트 결제 결과를 신뢰 (검증 스킵)
@@ -63,21 +64,40 @@ async function fetchPayment(impUid) {
     return null;
   }
 
-  // 결제 직후 조회 시 간헐적으로 아직 반영 안 된 경우 대비 재시도
   let lastMessage = "결제 정보 조회에 실패했습니다.";
-  for (let attempt = 1; attempt <= 4; attempt += 1) {
-    const data = await fetchPaymentOnce(impUid, accessToken);
 
-    if (data.code === 0 && data.response) {
-      return data.response;
+  for (let attempt = 1; attempt <= 4; attempt += 1) {
+    // 1) merchant_uid 로 조회 (안정적)
+    if (merchantUid) {
+      const byMerchant = await fetchJson(
+        `https://api.iamport.kr/payments/find/${encodeURIComponent(merchantUid)}`,
+        accessToken
+      );
+      if (byMerchant.code === 0 && byMerchant.response) {
+        return byMerchant.response;
+      }
+      lastMessage = byMerchant.message || lastMessage;
     }
 
-    lastMessage = data.message || lastMessage;
+    // 2) imp_uid 로 조회 (가능한 경우 보조)
+    if (impUid) {
+      const byImp = await fetchJson(
+        `https://api.iamport.kr/payments/${encodeURIComponent(impUid)}`,
+        accessToken
+      );
+      if (byImp.code === 0 && byImp.response) {
+        return byImp.response;
+      }
+      lastMessage = byImp.message || lastMessage;
+    }
+
     console.error(
       `[portone] payment lookup failed (try ${attempt}/4):`,
       lastMessage,
       "impUid=",
-      impUid
+      impUid,
+      "merchantUid=",
+      merchantUid
     );
 
     if (attempt < 4) {
@@ -87,7 +107,7 @@ async function fetchPayment(impUid) {
 
   if (String(lastMessage).includes("존재하지 않는 결제정보")) {
     throw new Error(
-      "존재하지 않는 결제정보입니다. 카드 결제는 됐을 수 있지만, Heroku의 PORTONE_API_KEY/SECRET 이 결제에 쓴 상점 식별코드(imp...)와 같은 포트원 계정인지 확인해 주세요."
+      "존재하지 않는 결제정보입니다. 결제는 됐을 수 있으니 주문번호(merchant_uid)와 포트원 결제내역을 확인해 주세요."
     );
   }
 
@@ -104,11 +124,11 @@ async function verifyPayment({
   expectedAmount,
   allowReady = false,
 }) {
-  if (!impUid) {
-    throw new Error("impUid가 필요합니다.");
+  if (!impUid && !merchantUid) {
+    throw new Error("impUid 또는 merchantUid가 필요합니다.");
   }
 
-  const payment = await fetchPayment(impUid);
+  const payment = await fetchPayment({ impUid, merchantUid });
 
   // 개발 모드 + API 키 없음
   if (!payment) {
@@ -121,6 +141,10 @@ async function verifyPayment({
 
   if (merchantUid && payment.merchant_uid !== merchantUid) {
     throw new Error("주문번호(merchant_uid)가 일치하지 않습니다.");
+  }
+
+  if (impUid && payment.imp_uid && payment.imp_uid !== impUid) {
+    throw new Error("결제번호(imp_uid)가 일치하지 않습니다.");
   }
 
   if (Number(payment.amount) !== Number(expectedAmount)) {
